@@ -5,21 +5,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  onAuthStateChanged, 
-  User 
-} from 'firebase/auth';
-import { 
-  collection, 
-  query, 
-  where, 
-  orderBy, 
-  onSnapshot, 
-  addDoc, 
-  doc, 
-  setDoc,
-  getDoc
-} from 'firebase/firestore';
-import { 
   TrendingUp, 
   TrendingDown, 
   Shield, 
@@ -68,7 +53,6 @@ import { format } from 'date-fns';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-import { auth, db, signInWithGoogle, logout } from './lib/firebase';
 import { analyzeExpense, getFinancialAdvice } from './lib/gemini';
 import { Expense, UserProfile, AIAnalysis, Goal } from './types';
 
@@ -86,6 +70,31 @@ const CATEGORY_COLORS: { [key: string]: string } = {
   Transport: '#f59e0b',
   Shopping: '#10b981',
   Other: '#64748b'
+};
+
+const CURRENCIES = [
+  { code: 'USD', symbol: '$', name: 'US Dollar' },
+  { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
+  { code: 'EUR', symbol: '€', name: 'Euro' },
+  { code: 'GBP', symbol: '£', name: 'British Pound' },
+  { code: 'JPY', symbol: '¥', name: 'Japanese Yen' },
+  { code: 'AUD', symbol: 'A$', name: 'Australian Dollar' },
+  { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar' },
+  { code: 'CHF', symbol: 'Fr', name: 'Swiss Franc' },
+  { code: 'CNY', symbol: '¥', name: 'Chinese Yuan' },
+  { code: 'SGD', symbol: 'S$', name: 'Singapore Dollar' },
+  { code: 'NZD', symbol: 'NZ$', name: 'New Zealand Dollar' },
+  { code: 'AED', symbol: 'د.إ', name: 'UAE Dirham' },
+];
+
+const getCurrencySymbol = (currency?: string) => {
+  const found = CURRENCIES.find(c => c.code === currency);
+  return found ? found.symbol : '$';
+};
+
+const formatCurrency = (amount: number, currency?: string) => {
+  const symbol = getCurrencySymbol(currency);
+  return `${symbol}${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 const SHIELD_LEVELS = [
@@ -293,7 +302,7 @@ const CommunityBenchmarks = ({ income }: { income?: number }) => {
   );
 };
 
-const GoalsCard = ({ goals, onAddGoal, onAddTemplate }: { goals: Goal[], onAddGoal: () => void, onAddTemplate: (title: string, target: number) => void }) => {
+const GoalsCard = ({ goals, onAddGoal, onAddTemplate, profile }: { goals: Goal[], onAddGoal: () => void, onAddTemplate: (title: string, target: number) => void, profile: UserProfile | null }) => {
   const templates = [
     { title: 'Emergency Fund', target: 5000, icon: <Shield className="w-3 h-3" /> },
     { title: 'Debt Free', target: 2000, icon: <Zap className="w-3 h-3" /> },
@@ -327,7 +336,7 @@ const GoalsCard = ({ goals, onAddGoal, onAddTemplate }: { goals: Goal[], onAddGo
                     <p className="text-xs font-bold text-slate-900">{goal.title}</p>
                     {isNorthStar && <span className="text-[8px] font-black uppercase tracking-widest text-brand-600 bg-brand-100 px-1 rounded">North Star</span>}
                   </div>
-                  <p className="text-[10px] text-slate-400 font-medium">Target: ${goal.targetAmount}</p>
+                  <p className="text-[10px] text-slate-400 font-medium">Target: {formatCurrency(goal.targetAmount, profile?.currency)}</p>
                 </div>
                 <p className="text-xs font-black text-brand-600">{Math.round(progress)}%</p>
               </div>
@@ -357,7 +366,7 @@ const GoalsCard = ({ goals, onAddGoal, onAddTemplate }: { goals: Goal[], onAddGo
                     </div>
                     <span className="text-xs font-bold text-slate-600 group-hover:text-brand-700">{t.title}</span>
                   </div>
-                  <span className="text-[10px] font-black text-slate-400 group-hover:text-brand-500">${t.target}</span>
+                  <span className="text-[10px] font-black text-slate-400 group-hover:text-brand-500">{formatCurrency(t.target, profile?.currency)}</span>
                 </button>
               ))}
             </div>
@@ -442,9 +451,11 @@ const ProfileModal = ({
             <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto custom-scrollbar">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Monthly Income ($)</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Monthly Income ({getCurrencySymbol(profile?.currency)})</label>
                   <div className="relative">
-                    <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 font-bold flex items-center justify-center text-xs">
+                      {getCurrencySymbol(profile?.currency)}
+                    </div>
                     <input
                       type="number"
                       value={income}
@@ -456,9 +467,11 @@ const ProfileModal = ({
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Essential Expenses ($)</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Essential Expenses ({getCurrencySymbol(profile?.currency)})</label>
                   <div className="relative">
-                    <Wallet className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 font-bold flex items-center justify-center text-xs">
+                      {getCurrencySymbol(profile?.currency)}
+                    </div>
                     <input
                       type="number"
                       value={essentials}
@@ -495,7 +508,9 @@ const ProfileModal = ({
                     <div key={cat} className="space-y-1">
                       <label className="text-[10px] font-bold text-slate-400 ml-1">{cat}</label>
                       <div className="relative">
-                        <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400" />
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 font-bold flex items-center justify-center text-[10px]">
+                          {getCurrencySymbol(profile?.currency)}
+                        </div>
                         <input
                           type="number"
                           value={budgets[cat] || ''}
@@ -529,10 +544,12 @@ const ProfileModal = ({
 
 const BudgetAlert = ({ 
   expenses, 
-  budgets 
+  budgets,
+  profile
 }: { 
   expenses: Expense[], 
-  budgets: { [category: string]: number } 
+  budgets: { [category: string]: number },
+  profile: UserProfile | null
 }) => {
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
@@ -581,7 +598,7 @@ const BudgetAlert = ({
               {alert.percent >= 100 ? 'Budget Exceeded' : 'Budget Warning'}
             </p>
             <p className="text-[10px] opacity-80 truncate">
-              {alert.category}: ${alert.spent.toFixed(0)} / ${alert.limit}
+              {alert.category}: {formatCurrency(alert.spent, profile?.currency)} / {formatCurrency(alert.limit, profile?.currency)}
             </p>
           </div>
           <div className="text-right shrink-0">
@@ -595,10 +612,12 @@ const BudgetAlert = ({
 
 const BudgetProgress = ({ 
   expenses, 
-  budgets 
+  budgets,
+  profile
 }: { 
   expenses: Expense[], 
-  budgets: { [category: string]: number } 
+  budgets: { [category: string]: number },
+  profile: UserProfile | null
 }) => {
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
@@ -629,7 +648,7 @@ const BudgetProgress = ({
             <div key={category} className="space-y-1.5">
               <div className="flex justify-between text-xs font-bold">
                 <span className="text-slate-600">{category}</span>
-                <span className="text-slate-900">${spent.toFixed(0)} / ${limit}</span>
+                <span className="text-slate-900">{formatCurrency(spent, profile?.currency)} / {formatCurrency(limit, profile?.currency)}</span>
               </div>
               <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                 <motion.div 
@@ -689,10 +708,12 @@ const HealthGauge = ({ score }: { score: number }) => {
 
 const TransactionHistory = ({ 
   expenses, 
-  onSelect 
+  onSelect,
+  profile
 }: { 
   expenses: Expense[], 
-  onSelect: (e: Expense) => void 
+  onSelect: (e: Expense) => void,
+  profile: UserProfile | null
 }) => {
   const [sortConfig, setSortConfig] = useState<{ key: keyof Expense, direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
   const [filter, setFilter] = useState('');
@@ -784,7 +805,7 @@ const TransactionHistory = ({
           </div>
           <div className="flex gap-2 w-full sm:w-auto">
             <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-1">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Min $</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Min {getCurrencySymbol(profile?.currency)}</span>
               <input 
                 type="number" 
                 value={minAmount} 
@@ -793,7 +814,7 @@ const TransactionHistory = ({
               />
             </div>
             <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-1">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Max $</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Max {getCurrencySymbol(profile?.currency)}</span>
               <input 
                 type="number" 
                 value={maxAmount} 
@@ -905,7 +926,7 @@ const TransactionHistory = ({
                     </span>
                   </td>
                   <td className="px-6 py-4 font-mono font-bold text-slate-900">
-                    -${expense.amount.toFixed(2)}
+                    -{formatCurrency(expense.amount, profile?.currency)}
                   </td>
                   <td className="px-6 py-4 text-right">
                     <button 
@@ -967,44 +988,7 @@ const LoadingScreen = () => (
   </div>
 );
 
-const AuthScreen = () => (
-  <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4">
-    <div className="max-w-md w-full text-center space-y-8">
-      <div className="space-y-2">
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-brand-500 text-white shadow-xl shadow-brand-200 mb-4">
-          <Zap className="w-10 h-10" />
-        </div>
-        <h1 className="text-4xl font-bold tracking-tight text-slate-900">Arth-AI</h1>
-        <p className="text-slate-500 text-lg">Decode the hidden impact of the global economy on your daily life.</p>
-      </div>
-      
-      <button
-        onClick={signInWithGoogle}
-        className="w-full flex items-center justify-center gap-3 bg-white border border-slate-200 text-slate-700 font-semibold py-4 px-6 rounded-2xl shadow-sm hover:bg-slate-50 transition-all active:scale-[0.98]"
-      >
-        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-6 h-6" alt="Google" />
-        Continue with Google
-      </button>
-      
-      <div className="grid grid-cols-3 gap-4 pt-8">
-        {[
-          { icon: Clock, label: "Inflation Tracking" },
-          { icon: Globe, label: "Macro Insights" },
-          { icon: Shield, label: "Survival Score" }
-        ].map((item, i) => (
-          <div key={i} className="flex flex-col items-center gap-2">
-            <div className="p-3 rounded-xl bg-brand-50 text-brand-600">
-              <item.icon className="w-5 h-5" />
-            </div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{item.label}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  </div>
-);
-
-const AnalysisCard = ({ analysis }: { analysis: AIAnalysis }) => {
+const AnalysisCard = ({ analysis, profile }: { analysis: AIAnalysis, profile: UserProfile | null }) => {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1017,11 +1001,11 @@ const AnalysisCard = ({ analysis }: { analysis: AIAnalysis }) => {
           <div className="flex justify-between items-end">
             <div>
               <p className="text-[10px] text-amber-600 font-bold uppercase">2016 Cost</p>
-              <p className="text-xl font-mono font-bold text-amber-900">${analysis.inflationTimeMachine.cost2016.toFixed(2)}</p>
+              <p className="text-xl font-mono font-bold text-amber-900">{formatCurrency(analysis.inflationTimeMachine.cost2016, profile?.currency)}</p>
             </div>
             <div className="text-right">
               <p className="text-[10px] text-amber-600 font-bold uppercase">2036 Projection</p>
-              <p className="text-xl font-mono font-bold text-amber-900">${analysis.inflationTimeMachine.cost2036.toFixed(2)}</p>
+              <p className="text-xl font-mono font-bold text-amber-900">{formatCurrency(analysis.inflationTimeMachine.cost2036, profile?.currency)}</p>
             </div>
           </div>
           <p className="text-sm text-amber-800/80 leading-relaxed italic">"{analysis.inflationTimeMachine.explanation}"</p>
@@ -1313,11 +1297,13 @@ const ArthLab = ({ lastExpense }: { lastExpense?: Expense }) => {
 const GoalModal = ({ 
   isOpen, 
   onClose, 
-  onAdd 
+  onAdd,
+  profile
 }: { 
   isOpen: boolean, 
   onClose: () => void, 
-  onAdd: (goal: Omit<Goal, 'id'>) => Promise<void> 
+  onAdd: (goal: Omit<Goal, 'id'>) => Promise<void>,
+  profile: UserProfile | null
 }) => {
   const [title, setTitle] = useState('');
   const [target, setTarget] = useState('');
@@ -1376,7 +1362,7 @@ const GoalModal = ({
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase text-slate-400 ml-1">Target Amount</label>
+                  <label className="text-[10px] font-bold uppercase text-slate-400 ml-1">Target Amount ({getCurrencySymbol(profile?.currency)})</label>
                   <input
                     required
                     type="number"
@@ -1387,7 +1373,7 @@ const GoalModal = ({
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase text-slate-400 ml-1">Current Savings</label>
+                  <label className="text-[10px] font-bold uppercase text-slate-400 ml-1">Current Savings ({getCurrencySymbol(profile?.currency)})</label>
                   <input
                     required
                     type="number"
@@ -1546,6 +1532,158 @@ const GuidedTour = ({
   );
 };
 
+const SimpleLogin = ({ onLogin }: { onLogin: (profile: UserProfile) => void }) => {
+  const [step, setStep] = useState(0);
+  const [currency, setCurrency] = useState<string>('USD');
+  const [name, setName] = useState('');
+  const [age, setAge] = useState<number | string>('');
+  const [learningGoal, setLearningGoal] = useState('');
+
+  const handleFinish = () => {
+    const profile: UserProfile = {
+      id: Math.random().toString(36).substr(2, 9),
+      name,
+      age: Number(age),
+      learningGoal,
+      currency,
+      createdAt: Date.now(),
+      monthlyIncome: 0,
+      essentialExpenses: 0,
+      customInflationRate: 5,
+      budgets: {},
+      goals: [],
+      streak: 0,
+      badges: []
+    };
+    onLogin(profile);
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 brand-grid">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="max-w-md w-full glass-card p-8 text-center"
+      >
+        <div className="mb-8">
+          <div className="w-16 h-16 bg-brand-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-brand-200">
+            <Zap className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Arth-AI Login</h1>
+          <p className="text-slate-500 text-sm mt-2">Personal Economic Engine v2.0</p>
+        </div>
+
+        <AnimatePresence mode="wait">
+          {step === 0 && (
+            <motion.div 
+              key="step0"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-6"
+            >
+              <h2 className="text-lg font-bold text-slate-900">Select Your Currency</h2>
+              <div className="grid grid-cols-3 gap-3">
+                {CURRENCIES.map((c) => (
+                  <button 
+                    key={c.code}
+                    onClick={() => setCurrency(c.code)}
+                    className={cn(
+                      "p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1",
+                      currency === c.code ? "border-brand-500 bg-brand-50" : "border-slate-100 bg-white hover:border-brand-200"
+                    )}
+                  >
+                    <span className={cn("text-xl font-bold", currency === c.code ? "text-brand-600" : "text-slate-400")}>
+                      {c.symbol}
+                    </span>
+                    <span className="font-bold text-[10px] uppercase tracking-tighter">{c.code}</span>
+                  </button>
+                ))}
+              </div>
+              <button 
+                onClick={() => setStep(1)}
+                className="w-full bg-brand-500 text-white py-4 rounded-2xl font-bold shadow-lg shadow-brand-200 hover:bg-brand-600 transition-all"
+              >
+                Continue
+              </button>
+            </motion.div>
+          )}
+
+          {step === 1 && (
+            <motion.div 
+              key="step1"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-6"
+            >
+              <h2 className="text-lg font-bold text-slate-900">Tell us about yourself</h2>
+              <div className="space-y-4 text-left">
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5 block">What is your Name?</label>
+                  <input 
+                    type="text" 
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Enter your name"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5 block">What is your Age? (11-25+)</label>
+                  <select 
+                    value={age}
+                    onChange={(e) => setAge(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
+                  >
+                    <option value="">Select Age</option>
+                    {Array.from({ length: 15 }, (_, i) => i + 11).map(a => (
+                      <option key={a} value={a}>{a}</option>
+                    ))}
+                    <option value="26">25+</option>
+                  </select>
+                </div>
+              </div>
+              <button 
+                disabled={!name || !age}
+                onClick={() => setStep(2)}
+                className="w-full bg-brand-500 text-white py-4 rounded-2xl font-bold shadow-lg shadow-brand-200 hover:bg-brand-600 transition-all disabled:opacity-50"
+              >
+                Next Step
+              </button>
+            </motion.div>
+          )}
+
+          {step === 2 && (
+            <motion.div 
+              key="step2"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-6"
+            >
+              <h2 className="text-lg font-bold text-slate-900">What do you want to learn?</h2>
+              <textarea 
+                value={learningGoal}
+                onChange={(e) => setLearningGoal(e.target.value)}
+                placeholder="e.g. How inflation affects my savings, or how to build a resilient budget..."
+                className="w-full h-32 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all resize-none"
+              />
+              <button 
+                disabled={!learningGoal}
+                onClick={handleFinish}
+                className="w-full bg-brand-500 text-white py-4 rounded-2xl font-bold shadow-lg shadow-brand-200 hover:bg-brand-600 transition-all disabled:opacity-50"
+              >
+                Enter Arth-AI
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+    </div>
+  );
+};
+
 const OnboardingWizard = ({ 
   isOpen, 
   onClose, 
@@ -1628,7 +1766,6 @@ const OnboardingWizard = ({
 };
 
 export default function App() {
-  const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1651,60 +1788,39 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'history'>('dashboard');
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (u) => {
-      setUser(u);
-      if (u) {
-        // Fetch or create profile
-        const profileRef = doc(db, 'users', u.uid);
-        const profileSnap = await getDoc(profileRef);
-        
-        if (profileSnap.exists()) {
-          setProfile(profileSnap.data() as UserProfile);
-        } else {
-          setShowOnboarding(true);
-          const newProfile: UserProfile = {
-            uid: u.uid,
-            email: u.email || '',
-            displayName: u.displayName || 'User',
-            photoURL: u.photoURL || '',
-            createdAt: Date.now(),
-            currency: 'USD'
-          };
-          await setDoc(profileRef, newProfile);
-          setProfile(newProfile);
-        }
-
-        // Listen for expenses
-        const q = query(
-          collection(db, 'expenses'),
-          where('uid', '==', u.uid),
-          orderBy('date', 'desc')
-        );
-        
-        const unsubExpenses = onSnapshot(q, (snapshot) => {
-          const exps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Expense));
-          setExpenses(exps);
-          setLoading(false);
-        });
-
-        return () => unsubExpenses();
-      } else {
-        setLoading(false);
-      }
-    });
-
-    return () => unsubscribe();
+    const savedProfile = localStorage.getItem('arth_profile');
+    const savedExpenses = localStorage.getItem('arth_expenses');
+    
+    if (savedProfile) {
+      setProfile(JSON.parse(savedProfile));
+    }
+    if (savedExpenses) {
+      setExpenses(JSON.parse(savedExpenses).map((e: any) => ({ ...e, date: new Date(e.date).getTime() })));
+    }
+    setLoading(false);
   }, []);
 
+  const handleLogin = (newProfile: UserProfile) => {
+    setProfile(newProfile);
+    localStorage.setItem('arth_profile', JSON.stringify(newProfile));
+  };
+
+  const handleLogout = () => {
+    setProfile(null);
+    localStorage.removeItem('arth_profile');
+    localStorage.removeItem('arth_expenses');
+    setExpenses([]);
+  };
+
   const handleUpdateProfile = async (data: Partial<UserProfile>) => {
-    if (!user) return;
-    const profileRef = doc(db, 'users', user.uid);
-    await setDoc(profileRef, data, { merge: true });
-    setProfile(prev => prev ? { ...prev, ...data } : null);
+    if (!profile) return;
+    const updated = { ...profile, ...data };
+    setProfile(updated);
+    localStorage.setItem('arth_profile', JSON.stringify(updated));
   };
 
   const handleAddGoal = async (goal: Omit<Goal, 'id'>) => {
-    if (!user || !profile) return;
+    if (!profile) return;
     const newGoal: Goal = { ...goal, id: Math.random().toString(36).substr(2, 9) };
     const updatedGoals = [...(profile.goals || []), newGoal];
     await handleUpdateProfile({ goals: updatedGoals });
@@ -1712,7 +1828,7 @@ export default function App() {
 
   const handleAddExpense = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !amount) return;
+    if (!profile || !amount) return;
 
     setAnalyzing(true);
     try {
@@ -1727,15 +1843,20 @@ export default function App() {
         }
       );
       
-      await addDoc(collection(db, 'expenses'), {
-        uid: user.uid,
+      const newExpense: Expense = {
+        id: Math.random().toString(36).substr(2, 9),
+        uid: profile.id,
         amount: Number(amount),
         category,
         description,
         tags: tags.split(',').map(t => t.trim()).filter(Boolean),
         date: Date.now(),
         aiAnalysis
-      });
+      };
+
+      const updatedExpenses = [newExpense, ...expenses];
+      setExpenses(updatedExpenses);
+      localStorage.setItem('arth_expenses', JSON.stringify(updatedExpenses));
 
       setAmount('');
       setDescription('');
@@ -1835,8 +1956,12 @@ export default function App() {
     return Number((sum / scored.length).toFixed(1));
   }, [displayExpenses]);
 
-  if (loading) return <LoadingScreen />;
-  if (!user) return <AuthScreen />;
+  if (loading) return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <Loader2 className="w-8 h-8 text-brand-500 animate-spin" />
+    </div>
+  );
+  if (!profile) return <SimpleLogin onLogin={handleLogin} />;
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20">
@@ -1869,7 +1994,7 @@ export default function App() {
               <span className="hidden sm:inline text-sm font-semibold">Profile</span>
             </button>
             <button 
-              onClick={logout}
+              onClick={handleLogout}
               className="p-2 rounded-xl hover:bg-slate-100 text-slate-500 transition-colors"
             >
               <LogOut className="w-5 h-5" />
@@ -1881,7 +2006,7 @@ export default function App() {
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-8 brand-grid min-h-screen">
         {/* Budget Alerts */}
         {displayProfile?.budgets && (
-          <BudgetAlert expenses={displayExpenses} budgets={displayProfile.budgets} />
+          <BudgetAlert expenses={displayExpenses} budgets={displayProfile.budgets} profile={displayProfile} />
         )}
 
         {/* Tab Switcher */}
@@ -1956,7 +2081,7 @@ export default function App() {
                 </div>
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Total Spent</p>
-                  <p className="text-2xl font-black text-slate-900">${totalSpent.toLocaleString()}</p>
+                  <p className="text-2xl font-black text-slate-900">{formatCurrency(totalSpent, displayProfile?.currency)}</p>
                 </div>
               </div>
 
@@ -2098,7 +2223,7 @@ export default function App() {
                         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: CATEGORY_COLORS[cat.name] || '#cbd5e1' }} />
                         <span className="text-xs font-bold text-slate-600">{cat.name}</span>
                       </div>
-                      <span className="text-xs font-mono font-bold text-slate-900">${cat.value.toFixed(0)}</span>
+                      <span className="text-xs font-mono font-bold text-slate-900">{formatCurrency(cat.value, displayProfile?.currency)}</span>
                     </div>
                   ))}
                 </div>
@@ -2115,10 +2240,11 @@ export default function App() {
                     goals={displayProfile?.goals || []} 
                     onAddGoal={() => setIsGoalModalOpen(true)} 
                     onAddTemplate={(title, target) => handleAddGoal({ title, targetAmount: target, currentAmount: 0, category: 'Other' })}
+                    profile={displayProfile}
                   />
                   <CommunityBenchmarks income={displayProfile?.monthlyIncome} />
                   <ArthLab lastExpense={displayExpenses[0]} />
-                  <BudgetProgress expenses={displayExpenses} budgets={displayProfile?.budgets || {}} />
+                  <BudgetProgress expenses={displayExpenses} budgets={displayProfile?.budgets || {}} profile={displayProfile} />
                   <QuickTips />
                 </div>
               </div>
@@ -2167,7 +2293,7 @@ export default function App() {
                       </div>
                       <div className="text-right flex items-center gap-4">
                         <div>
-                          <p className="font-mono font-bold text-slate-900">-${expense.amount.toFixed(2)}</p>
+                          <p className="font-mono font-bold text-slate-900">-{formatCurrency(expense.amount, displayProfile?.currency)}</p>
                           {expense.aiAnalysis && (
                             <div className="flex items-center gap-1 justify-end">
                               <Shield className="w-3 h-3 text-indigo-500" />
@@ -2238,7 +2364,7 @@ export default function App() {
             </div>
           </>
         ) : (
-          <TransactionHistory expenses={displayExpenses} onSelect={setSelectedExpense} />
+          <TransactionHistory expenses={displayExpenses} onSelect={setSelectedExpense} profile={displayProfile} />
         )}
       </main>
 
@@ -2290,7 +2416,7 @@ export default function App() {
               
               <form onSubmit={handleAddExpense} className="p-6 space-y-4">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Amount ($)</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Amount ({getCurrencySymbol(profile?.currency)})</label>
                   <input
                     required
                     type="number"
@@ -2393,7 +2519,7 @@ export default function App() {
                 <div>
                   <h3 className="text-2xl font-bold text-slate-900">{selectedExpense.description || selectedExpense.category}</h3>
                   <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">
-                    {format(selectedExpense.date, 'MMMM dd, yyyy')} • ${selectedExpense.amount.toFixed(2)}
+                    {format(selectedExpense.date, 'MMMM dd, yyyy')} • {formatCurrency(selectedExpense.amount, displayProfile?.currency)}
                   </p>
                 </div>
                 <button 
@@ -2406,7 +2532,7 @@ export default function App() {
               
               <div className="p-8 overflow-y-auto custom-scrollbar">
                 {selectedExpense.aiAnalysis ? (
-                  <AnalysisCard analysis={selectedExpense.aiAnalysis} />
+                  <AnalysisCard analysis={selectedExpense.aiAnalysis} profile={displayProfile} />
                 ) : (
                   <div className="text-center py-12">
                     <AlertCircle className="w-12 h-12 text-slate-200 mx-auto mb-4" />
@@ -2442,6 +2568,7 @@ export default function App() {
         isOpen={isGoalModalOpen} 
         onClose={() => setIsGoalModalOpen(false)} 
         onAdd={handleAddGoal} 
+        profile={displayProfile}
       />
 
       <GuidedTour 

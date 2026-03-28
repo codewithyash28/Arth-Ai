@@ -5,7 +5,6 @@
 [![Hackonomics 2026](https://img.shields.io/badge/Hackonomics-2026-blueviolet?style=for-the-badge)](https://ais-dev-d5o2ksb4hpkoosrbt2jphp-401526279575.asia-east1.run.app)
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=white)](https://firebase.google.com/)
 [![Gemini AI](https://img.shields.io/badge/Gemini_AI-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://deepmind.google/technologies/gemini/)
 
 ---
@@ -52,7 +51,7 @@ Don't just save; aim.
 ## 🛠️ Tech Stack
 
 *   **Frontend:** React 18, Vite, Tailwind CSS (v4), Framer Motion.
-*   **Backend:** Firebase (Authentication & Firestore).
+*   **Persistence:** Local Storage (Privacy-first approach).
 *   **Intelligence:** Google Gemini AI (Pro & Flash models) for deep expense analysis and financial advice.
 *   **Visualization:** Recharts & D3 for high-density data rendering.
 
@@ -62,7 +61,6 @@ Don't just save; aim.
 
 ### Prerequisites
 *   Node.js (v18+)
-*   Firebase Project
 *   Google Gemini API Key
 
 ### Installation
@@ -78,9 +76,6 @@ Don't just save; aim.
 3.  **Environment Variables**
     Create a `.env` file in the root:
     ```env
-    VITE_FIREBASE_API_KEY=your_key
-    VITE_FIREBASE_AUTH_DOMAIN=your_domain
-    VITE_FIREBASE_PROJECT_ID=your_id
     GEMINI_API_KEY=your_gemini_key
     ```
 4.  **Run Development Server**
@@ -94,7 +89,7 @@ Don't just save; aim.
 
 **Code with Yash**
 *   [Portfolio](https://yashchoubey.netlify.app/)
-*   [GitHub](https://github.com/codewithyash28)
+*   [GitHub](https://github.com/yashchoubey)
 
 ---
 

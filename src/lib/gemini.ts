@@ -1,8 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AIAnalysis } from "../types";
 
-const apiKey = process.env.GEMINI_API_KEY;
-const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
 const SYSTEM_PROMPT = `You are the core intelligence of "Arth-AI," a revolutionary Financial Literacy & Economic Forecasting platform. Your mission is to decode the hidden impact of the global economy on an individual's daily life.
 
@@ -76,9 +75,6 @@ export async function analyzeExpense(
   description: string,
   userProfile?: { income?: number, essentials?: number, customInflation?: number }
 ): Promise<AIAnalysis> {
-  if (!ai) {
-    throw new Error("Gemini API key is not configured. Please check your environment variables.");
-  }
   const model = "gemini-3-flash-preview";
   
   const inflationContext = userProfile?.customInflation 
@@ -116,9 +112,6 @@ Advanced Economic Modeling:
 }
 
 export async function getFinancialAdvice(message: string, history: { role: 'user' | 'ai', text: string }[]): Promise<string> {
-  if (!ai) {
-    return "I'm currently unable to provide financial advice as the Gemini AI is not configured. Please ensure your API key is set.";
-  }
   const model = "gemini-3-flash-preview";
   const chat = ai.chats.create({
     model,

@@ -8,12 +8,12 @@ export interface Goal {
 }
 
 export interface UserProfile {
-  uid: string;
-  email: string;
-  displayName: string;
-  photoURL: string;
-  createdAt: number;
+  id: string;
+  name: string;
+  age: number;
+  learningGoal: string;
   currency: string;
+  createdAt: number;
   monthlyIncome?: number;
   essentialExpenses?: number;
   customInflationRate?: number;
