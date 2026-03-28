@@ -53,6 +53,15 @@ import { format } from 'date-fns';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
+declare global {
+  interface Window {
+    aistudio: {
+      hasSelectedApiKey: () => Promise<boolean>;
+      openSelectKey: () => Promise<void>;
+    };
+  }
+}
+
 import { analyzeExpense, getFinancialAdvice } from './lib/gemini';
 import { Expense, UserProfile, AIAnalysis, Goal } from './types';
 
@@ -1089,7 +1098,7 @@ const AnalysisCard = ({ analysis, profile }: { analysis: AIAnalysis, profile: Us
   );
 };
 
-const ChatInterface = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
+const ChatInterface = ({ isOpen, onClose, hasApiKey, onSelectKey }: { isOpen: boolean, onClose: () => void, hasApiKey: boolean, onSelectKey: () => Promise<void> }) => {
   const [messages, setMessages] = useState<{ role: 'user' | 'ai', text: string }[]>([
     { role: 'ai', text: "Hello! I'm your Arth-AI mentor. Ask me anything about the economy or your personal finances." }
   ]);
@@ -1099,6 +1108,14 @@ const ChatInterface = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => vo
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || loading) return;
+
+    if (!hasApiKey && window.aistudio) {
+      const confirm = window.confirm("AI chat requires a Gemini API key. Would you like to set one up now?");
+      if (confirm) {
+        await onSelectKey();
+        return;
+      }
+    }
 
     const userMsg = input;
     setInput('');
@@ -1778,6 +1795,33 @@ export default function App() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
   const [isTourOpen, setIsTourOpen] = useState(false);
+  const [hasApiKey, setHasApiKey] = useState(true);
+
+  useEffect(() => {
+    const checkApiKey = async () => {
+      if (process.env.GEMINI_API_KEY || process.env.API_KEY) {
+        setHasApiKey(true);
+        return;
+      }
+
+      if (window.aistudio) {
+        const selected = await window.aistudio.hasSelectedApiKey();
+        setHasApiKey(selected);
+      } else {
+        setHasApiKey(false);
+      }
+    };
+
+    checkApiKey();
+  }, []);
+
+  const handleSelectKey = async () => {
+    if (window.aistudio) {
+      await window.aistudio.openSelectKey();
+      setHasApiKey(true);
+      // We assume success as per instructions to avoid race conditions
+    }
+  };
 
   // Form state
   const [amount, setAmount] = useState('');
@@ -1829,6 +1873,14 @@ export default function App() {
   const handleAddExpense = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile || !amount) return;
+
+    if (!hasApiKey && window.aistudio) {
+      const confirm = window.confirm("AI analysis requires a Gemini API key. Would you like to set one up now?");
+      if (confirm) {
+        await handleSelectKey();
+        return;
+      }
+    }
 
     setAnalyzing(true);
     try {
@@ -1976,6 +2028,15 @@ export default function App() {
           <Logo isDemo={isDemoMode} />
           
           <div className="flex items-center gap-2 sm:gap-4">
+            {!hasApiKey && window.aistudio && (
+              <button 
+                onClick={handleSelectKey}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-100 text-amber-700 text-[10px] font-bold uppercase tracking-widest hover:bg-amber-200 transition-all border border-amber-200"
+              >
+                <AlertCircle className="w-3.5 h-3.5" />
+                Setup AI Key
+              </button>
+            )}
             <button 
               onClick={() => setIsDemoMode(!isDemoMode)}
               className={cn(
@@ -2549,7 +2610,12 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      <ChatInterface isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+      <ChatInterface 
+        isOpen={isChatOpen} 
+        onClose={() => setIsChatOpen(false)} 
+        hasApiKey={hasApiKey}
+        onSelectKey={handleSelectKey}
+      />
 
       <ProfileModal 
         isOpen={isProfileOpen} 

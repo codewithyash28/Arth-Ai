@@ -1,7 +1,13 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AIAnalysis } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+function getAI() {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+  if (!apiKey) {
+    throw new Error("No API key found. Please ensure GEMINI_API_KEY or API_KEY is set in your environment.");
+  }
+  return new GoogleGenAI({ apiKey });
+}
 
 const SYSTEM_PROMPT = `You are the core intelligence of "Arth-AI," a revolutionary Financial Literacy & Economic Forecasting platform. Your mission is to decode the hidden impact of the global economy on an individual's daily life.
 
@@ -75,6 +81,7 @@ export async function analyzeExpense(
   description: string,
   userProfile?: { income?: number, essentials?: number, customInflation?: number }
 ): Promise<AIAnalysis> {
+  const ai = getAI();
   const model = "gemini-3-flash-preview";
   
   const inflationContext = userProfile?.customInflation 
@@ -112,20 +119,25 @@ Advanced Economic Modeling:
 }
 
 export async function getFinancialAdvice(message: string, history: { role: 'user' | 'ai', text: string }[]): Promise<string> {
+  const ai = getAI();
   const model = "gemini-3-flash-preview";
-  const chat = ai.chats.create({
+  
+  // Convert history to Gemini format and add the new message
+  const contents = [
+    ...history.map(h => ({
+      role: h.role === 'ai' ? 'model' : 'user',
+      parts: [{ text: h.text }]
+    })),
+    { role: 'user', parts: [{ text: message }] }
+  ];
+
+  const response = await ai.models.generateContent({
     model,
+    contents,
     config: {
       systemInstruction: "You are the Arth-AI Mentor. Provide professional, supportive, and strategic financial advice based on economic principles. Keep responses concise and engaging.",
     },
   });
 
-  // Convert history to Gemini format
-  const contents = history.map(h => ({
-    role: h.role === 'ai' ? 'model' : 'user',
-    parts: [{ text: h.text }]
-  }));
-
-  const response = await chat.sendMessage({ message });
   return response.text;
 }
