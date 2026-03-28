@@ -967,7 +967,7 @@ const LoadingScreen = () => (
   </div>
 );
 
-const AuthScreen = () => (
+const AuthScreen = ({ onSignIn, onDemoMode, error }: { onSignIn: () => void, onDemoMode: () => void, error: string | null }) => (
   <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4">
     <div className="max-w-md w-full text-center space-y-8">
       <div className="space-y-2">
@@ -977,14 +977,39 @@ const AuthScreen = () => (
         <h1 className="text-4xl font-bold tracking-tight text-slate-900">Arth-AI</h1>
         <p className="text-slate-500 text-lg">Decode the hidden impact of the global economy on your daily life.</p>
       </div>
+
+      {error && (
+        <div className="p-4 rounded-2xl bg-red-50 border border-red-100 text-red-700 text-sm text-left space-y-2">
+          <div className="flex items-center gap-2 font-bold uppercase text-[10px] tracking-widest">
+            <AlertCircle className="w-4 h-4" />
+            Authentication Error
+          </div>
+          <p>{error}</p>
+          {error.includes('unauthorized-domain') && (
+            <p className="text-xs opacity-80">
+              Note: This domain is not authorized in your Firebase project. Please add your deployment domain to the Authorized Domains list in the Firebase Console.
+            </p>
+          )}
+        </div>
+      )}
       
-      <button
-        onClick={signInWithGoogle}
-        className="w-full flex items-center justify-center gap-3 bg-white border border-slate-200 text-slate-700 font-semibold py-4 px-6 rounded-2xl shadow-sm hover:bg-slate-50 transition-all active:scale-[0.98]"
-      >
-        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-6 h-6" alt="Google" />
-        Continue with Google
-      </button>
+      <div className="space-y-3">
+        <button
+          onClick={onSignIn}
+          className="w-full flex items-center justify-center gap-3 bg-white border border-slate-200 text-slate-700 font-semibold py-4 px-6 rounded-2xl shadow-sm hover:bg-slate-50 transition-all active:scale-[0.98]"
+        >
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-6 h-6" alt="Google" />
+          Continue with Google
+        </button>
+
+        <button
+          onClick={onDemoMode}
+          className="w-full flex items-center justify-center gap-3 bg-brand-50 text-brand-600 font-semibold py-4 px-6 rounded-2xl hover:bg-brand-100 transition-all active:scale-[0.98]"
+        >
+          <Zap className="w-5 h-5" />
+          Explore in Demo Mode
+        </button>
+      </div>
       
       <div className="grid grid-cols-3 gap-4 pt-8">
         {[
@@ -1638,6 +1663,7 @@ export default function App() {
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
   const [isTourOpen, setIsTourOpen] = useState(false);
@@ -1695,6 +1721,16 @@ export default function App() {
 
     return () => unsubscribe();
   }, []);
+
+  const handleSignIn = async () => {
+    try {
+      setAuthError(null);
+      await signInWithGoogle();
+    } catch (error: any) {
+      console.error("Sign-in error:", error);
+      setAuthError(error.message || "Failed to sign in with Google.");
+    }
+  };
 
   const handleUpdateProfile = async (data: Partial<UserProfile>) => {
     if (!user) return;
@@ -1836,7 +1872,15 @@ export default function App() {
   }, [displayExpenses]);
 
   if (loading) return <LoadingScreen />;
-  if (!user) return <AuthScreen />;
+  if (!user && !isDemoMode) {
+    return (
+      <AuthScreen
+        onSignIn={handleSignIn}
+        onDemoMode={() => setIsDemoMode(true)}
+        error={authError}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20">
