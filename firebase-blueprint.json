@@ -1,0 +1,46 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores user preferences and basic info",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "currency": { "type": "string" },
+        "monthlyIncome": { "type": "number" },
+        "essentialExpenses": { "type": "number" },
+        "customInflationRate": { "type": "number" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "A single financial transaction logged by the user",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "uid": { "type": "string" },
+        "amount": { "type": "number" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "date": { "type": "number" },
+        "aiAnalysis": { "type": "object" }
+      },
+      "required": ["uid", "amount", "category", "date"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile document"
+    },
+    "/expenses/{expenseId}": {
+      "schema": "Expense",
+      "description": "Collection of all user expenses"
+    }
+  }
+}
