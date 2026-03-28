@@ -2,6 +2,8 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { AIAnalysis } from "../types";
 
 const apiKey = process.env.GEMINI_API_KEY;
+// The GoogleGenAI constructor requires a truthy apiKey or it will throw at runtime.
+// We handle this by only initializing it if the key exists.
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 const SYSTEM_PROMPT = `You are the core intelligence of "Arth-AI," a revolutionary Financial Literacy & Economic Forecasting platform. Your mission is to decode the hidden impact of the global economy on an individual's daily life.
