@@ -89,13 +89,13 @@ Don't just save; aim.
 
 **Code with Yash**
 *   [Portfolio](https://yashchoubey.netlify.app/)
-*   [GitHub](https://github.com/yashchoubey)
+*  [GitHub](https://github.com/yashchoubey)
 
 ---
 
 ## 📜 License
 
-This project is licensed under the **Apache-2.0 License**.
+This project is licensed under the **MIT-2.0 License**.
 
 ---
 
