@@ -1,10 +1,25 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AIAnalysis } from "../types";
 
-const apiKey = process.env.GEMINI_API_KEY;
-// The GoogleGenAI constructor requires a truthy apiKey or it will throw at runtime.
-// We handle this by only initializing it if the key exists.
-const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
+let aiInstance: GoogleGenAI | null = null;
+
+function getAI() {
+  if (aiInstance) return aiInstance;
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  // Defensive check for missing, placeholder, or improperly injected API keys
+  if (!apiKey || apiKey === "MY_GEMINI_API_KEY" || apiKey === "undefined" || apiKey === "") {
+    return null;
+  }
+
+  try {
+    aiInstance = new GoogleGenAI({ apiKey });
+    return aiInstance;
+  } catch (error) {
+    console.error("Failed to initialize GoogleGenAI:", error);
+    return null;
+  }
+}
 
 const SYSTEM_PROMPT = `You are the core intelligence of "Arth-AI," a revolutionary Financial Literacy & Economic Forecasting platform. Your mission is to decode the hidden impact of the global economy on an individual's daily life.
 
@@ -78,6 +93,7 @@ export async function analyzeExpense(
   description: string,
   userProfile?: { income?: number, essentials?: number, customInflation?: number }
 ): Promise<AIAnalysis> {
+  const ai = getAI();
   if (!ai) {
     throw new Error("Gemini API key is not configured. Please check your environment variables.");
   }
@@ -118,6 +134,7 @@ Advanced Economic Modeling:
 }
 
 export async function getFinancialAdvice(message: string, history: { role: 'user' | 'ai', text: string }[]): Promise<string> {
+  const ai = getAI();
   if (!ai) {
     return "I'm currently unable to provide financial advice as the Gemini AI is not configured. Please ensure your API key is set.";
   }
