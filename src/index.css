@@ -23,14 +23,27 @@
 }
 
 @utility glass-card {
-  @apply bg-white/80 backdrop-blur-md border border-slate-200 shadow-sm rounded-2xl;
+  @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] rounded-[2rem];
 }
 
 @utility stat-card {
-  @apply p-6 glass-card hover:shadow-md transition-all duration-300;
+  @apply p-6 glass-card hover:shadow-[0_8px_32px_0_rgba(14,165,233,0.1)] hover:border-brand-300/50 transition-all duration-500;
 }
 
 @utility brand-grid {
-  background-image: radial-gradient(#e2e8f0 0.8px, transparent 0.8px);
-  background-size: 24px 24px;
+  background-image: radial-gradient(var(--color-slate-200) 0.8px, transparent 0.8px);
+  background-size: 32px 32px;
+}
+
+@utility custom-scrollbar {
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    @apply bg-slate-200 rounded-full hover:bg-slate-300 transition-colors;
+  }
 }

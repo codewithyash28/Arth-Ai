@@ -968,15 +968,67 @@ const LoadingScreen = () => (
 );
 
 const AuthScreen = ({ onSignIn, onDemoMode, error }: { onSignIn: () => void, onDemoMode: () => void, error: string | null }) => (
-  <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4">
-    <div className="max-w-md w-full text-center space-y-8">
-      <div className="space-y-2">
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-brand-500 text-white shadow-xl shadow-brand-200 mb-4">
-          <Zap className="w-10 h-10" />
+  <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4 relative overflow-hidden">
+    {/* Animated Background Elements */}
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      <motion.div
+        animate={{
+          scale: [1, 1.2, 1],
+          rotate: [0, 90, 0],
+          opacity: [0.03, 0.05, 0.03]
+        }}
+        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+        className="absolute -top-1/4 -left-1/4 w-full h-full bg-brand-500 rounded-full blur-[120px]"
+      />
+      <motion.div
+        animate={{
+          scale: [1, 1.3, 1],
+          rotate: [0, -60, 0],
+          opacity: [0.02, 0.04, 0.02]
+        }}
+        transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+        className="absolute -bottom-1/4 -right-1/4 w-full h-full bg-indigo-500 rounded-full blur-[120px]"
+      />
+      <div className="absolute inset-0 brand-grid opacity-[0.4]" />
+    </div>
+
+    <div className="max-w-md w-full text-center space-y-8 relative z-10">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="space-y-4"
+      >
+        <div className="relative inline-block group">
+          <motion.div
+            animate={{ scale: [1, 1.1, 1], opacity: [0.5, 0.8, 0.5] }}
+            transition={{ duration: 4, repeat: Infinity }}
+            className="absolute inset-0 bg-brand-400 blur-2xl rounded-full opacity-50 group-hover:opacity-100 transition-opacity"
+          />
+          <div className="relative inline-flex items-center justify-center w-24 h-24 rounded-[2rem] bg-slate-900 text-white shadow-2xl group-hover:scale-105 transition-transform">
+            <Zap className="w-12 h-12 text-brand-400" />
+          </div>
         </div>
-        <h1 className="text-4xl font-bold tracking-tight text-slate-900">Arth-AI</h1>
-        <p className="text-slate-500 text-lg">Decode the hidden impact of the global economy on your daily life.</p>
-      </div>
+
+        <div className="space-y-1">
+          <h1 className="text-5xl font-black tracking-tighter text-slate-900 uppercase">Arth-AI</h1>
+          <div className="flex items-center justify-center gap-2">
+            <div className="h-[1px] w-8 bg-slate-200" />
+            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-600">Economic Engine</span>
+            <div className="h-[1px] w-8 bg-slate-200" />
+          </div>
+        </div>
+
+        <p className="text-slate-500 text-lg leading-relaxed px-4">
+          Decode the hidden impact of the global economy on your daily life.
+        </p>
+
+        <div className="pt-2">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+            <div className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse" />
+            Intelligence by Gemini 3.0
+          </span>
+        </div>
+      </motion.div>
 
       {error && (
         <div className="p-4 rounded-2xl bg-red-50 border border-red-100 text-red-700 text-sm text-left space-y-2">
@@ -993,10 +1045,15 @@ const AuthScreen = ({ onSignIn, onDemoMode, error }: { onSignIn: () => void, onD
         </div>
       )}
       
-      <div className="space-y-3">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3 }}
+        className="space-y-3"
+      >
         <button
           onClick={onSignIn}
-          className="w-full flex items-center justify-center gap-3 bg-white border border-slate-200 text-slate-700 font-semibold py-4 px-6 rounded-2xl shadow-sm hover:bg-slate-50 transition-all active:scale-[0.98]"
+          className="w-full flex items-center justify-center gap-3 bg-white border border-slate-200 text-slate-700 font-bold py-4.5 px-6 rounded-3xl shadow-xl shadow-slate-200/50 hover:bg-slate-50 hover:-translate-y-0.5 transition-all active:scale-[0.98] group"
         >
           <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-6 h-6" alt="Google" />
           Continue with Google
@@ -1004,12 +1061,17 @@ const AuthScreen = ({ onSignIn, onDemoMode, error }: { onSignIn: () => void, onD
 
         <button
           onClick={onDemoMode}
-          className="w-full flex items-center justify-center gap-3 bg-brand-50 text-brand-600 font-semibold py-4 px-6 rounded-2xl hover:bg-brand-100 transition-all active:scale-[0.98]"
+          className="w-full flex items-center justify-center gap-3 bg-slate-900 text-white font-bold py-4.5 px-6 rounded-3xl shadow-xl shadow-slate-900/20 hover:bg-slate-800 hover:-translate-y-0.5 transition-all active:scale-[0.98] group"
         >
-          <Zap className="w-5 h-5" />
+          <motion.div
+            animate={{ rotate: [0, 15, -15, 0] }}
+            transition={{ duration: 2, repeat: Infinity }}
+          >
+            <Zap className="w-5 h-5 text-brand-400" />
+          </motion.div>
           Explore in Demo Mode
         </button>
-      </div>
+      </motion.div>
       
       <div className="grid grid-cols-3 gap-4 pt-8">
         {[
@@ -1956,9 +2018,10 @@ export default function App() {
           <>
             {/* Stats Bento Grid */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="md:col-span-2 stat-card flex items-center gap-6" id="tour-shield">
+              <div className="md:col-span-2 stat-card flex items-center gap-6 relative overflow-hidden group" id="tour-shield">
+                <div className="absolute inset-0 bg-gradient-to-br from-brand-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 <HealthGauge score={Math.round(avgShieldScore)} />
-                <div className="flex-1 space-y-2">
+                <div className="flex-1 space-y-2 relative z-10">
                   <div className="flex flex-col">
                     <h3 className="text-sm font-bold text-slate-900">Economic Resilience</h3>
                     <span className="text-[10px] text-slate-400 font-medium">How strong your financial safety net is</span>
@@ -2193,9 +2256,10 @@ export default function App() {
                       layout
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
+                      whileHover={{ scale: 1.01, x: 4 }}
                       exit={{ opacity: 0, scale: 0.95 }}
                       onClick={() => setSelectedExpense(expense)}
-                      className="glass-card p-4 flex items-center justify-between cursor-pointer hover:border-brand-300 transition-colors group"
+                      className="glass-card p-5 flex items-center justify-between cursor-pointer border-white/40 hover:border-brand-300/50 hover:bg-white transition-all group"
                     >
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 group-hover:bg-brand-50 group-hover:text-brand-500 transition-colors">
