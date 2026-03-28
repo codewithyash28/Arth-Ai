@@ -94,7 +94,7 @@ Don't just save; aim.
 
 **Code with Yash**
 *   [Portfolio](https://yashchoubey.netlify.app/)
-*   [GitHub] (https://github.com/codewithyash28)
+*   [GitHub](https://github.com/codewithyash28)
 
 ---
 
